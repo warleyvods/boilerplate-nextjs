@@ -1,0 +1,42 @@
+name: Job Secovicred RH-Web Front
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: yarn install
+        run: |
+          yarn
+
+      - name: Docker Build
+        env:
+          DOCKER_USER: ${{secrets.DOCKER_USER}}
+          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+        run: |
+          docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+
+      - name: Build the Docker image NextJS
+        run: docker build . --file Dockerfile --tag warleyvods/rh-web-fe
+
+      - name: Docker Push
+        run: docker push warleyvods/rh-web-fe
+
+#  SSH:
+#    needs: Build
+#    name: Deploy
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: executing remote ssh commands using ssh key
+#        uses: appleboy/ssh-action@master
+#        with:
+#          host: ${{ secrets.HOST }}
+#          username: ${{ secrets.USERNAME }}
+#          key: ${{ secrets.KEY_ED25519 }}
+#          port: ${{ secrets.PORT }}
+#          script: |
+#            cd rh-web/
+#            sh script.sh
