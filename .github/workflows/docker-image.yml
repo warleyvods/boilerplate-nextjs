@@ -1,0 +1,50 @@
+name: Docker Image CI
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Docker login
+      env:
+        DOCKER_USER: ${{secrets.DOCKER_USER}}
+        DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+      run: |
+        docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+
+    - uses: actions/checkout@v3
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag warleyvods/rh-web-fe
+
+    - name: Docker Push
+      run: docker push warleyvods/rh-web-fe
+
+  #Lembrar que é o user comum (não root) + chave PRIVADA (do user comum)!
+  SSH:
+    needs: build
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY_ED25519 }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd rh-web/
+            sh script.sh
+
+      - name: Discord
+        uses: sarisia/actions-status-discord@v1.9.0
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: "Front RH Web"
+          description: "Build and Deploy to Server"
+          username: GitHub Actions
